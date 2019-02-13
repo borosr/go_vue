@@ -1,19 +1,26 @@
 package main
 import (
-    // "io"
-    // "net/http"
-    // "os"
-    "github.com/labstack/echo"
-    "github.com/labstack/echo/middleware"
+	"path/filepath"
+    "net/http"
+    "os"
+    "github.com/go-chi/chi"
+    "github.com/go-chi/chi/middleware"
 )
 
 func main()  {
-	e := echo.New()
+    r := chi.NewRouter()
 
-    e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
-	
-    e.File("/", "public/index.html")
-    e.Static("/assets", "public/assets")
-    e.Logger.Fatal(e.Start(":9000"))
+    r.Use(middleware.RequestID)
+    r.Use(middleware.RealIP)
+    r.Use(middleware.Logger)
+    r.Use(middleware.Recoverer)
+
+    workDir, _ := os.Getwd()
+    publicDir := filepath.Join(workDir, "public")
+
+    fs := http.StripPrefix("", http.FileServer(http.Dir(publicDir)))
+
+    r.Handle("/*", fs)
+
+    http.ListenAndServe(":9000", r)
 }
